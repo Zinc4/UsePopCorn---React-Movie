@@ -1,55 +1,52 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import StarRating from "./StarRating";
-import { useMovie } from "./useMovie";
-import { useLocalStorage } from "./useLocalStorage";
-import { useKey } from "./useKey";
 
-// const tempMovieData = [
-//   {
-//     imdbID: "tt1375666",
-//     Title: "Inception",
-//     Year: "2010",
-//     Poster:
-//       "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg",
-//   },
-//   {
-//     imdbID: "tt0133093",
-//     Title: "The Matrix",
-//     Year: "1999",
-//     Poster:
-//       "https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
-//   },
-//   {
-//     imdbID: "tt6751668",
-//     Title: "Parasite",
-//     Year: "2019",
-//     Poster:
-//       "https://m.media-amazon.com/images/M/MV5BYWZjMjk3ZTItODQ2ZC00NTY5LWE0ZDYtZTI3MjcwN2Q5NTVkXkEyXkFqcGdeQXVyODk4OTc3MTY@._V1_SX300.jpg",
-//   },
-// ];
+const tempMovieData = [
+  {
+    imdbID: "tt1375666",
+    Title: "Inception",
+    Year: "2010",
+    Poster:
+      "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg",
+  },
+  {
+    imdbID: "tt0133093",
+    Title: "The Matrix",
+    Year: "1999",
+    Poster:
+      "https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
+  },
+  {
+    imdbID: "tt6751668",
+    Title: "Parasite",
+    Year: "2019",
+    Poster:
+      "https://m.media-amazon.com/images/M/MV5BYWZjMjk3ZTItODQ2ZC00NTY5LWE0ZDYtZTI3MjcwN2Q5NTVkXkEyXkFqcGdeQXVyODk4OTc3MTY@._V1_SX300.jpg",
+  },
+];
 
-// const tempWatchedData = [
-//   {
-//     imdbID: "tt1375666",
-//     Title: "Inception",
-//     Year: "2010",
-//     Poster:
-//       "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg",
-//     runtime: 148,
-//     imdbRating: 8.8,
-//     userRating: 10,
-//   },
-//   {
-//     imdbID: "tt0088763",
-//     Title: "Back to the Future",
-//     Year: "1985",
-//     Poster:
-//       "https://m.media-amazon.com/images/M/MV5BZmU0M2Y1OGUtZjIxNi00ZjBkLTg1MjgtOWIyNThiZWIwYjRiXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
-//     runtime: 116,
-//     imdbRating: 8.5,
-//     userRating: 9,
-//   },
-// ];
+const tempWatchedData = [
+  {
+    imdbID: "tt1375666",
+    Title: "Inception",
+    Year: "2010",
+    Poster:
+      "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg",
+    runtime: 148,
+    imdbRating: 8.8,
+    userRating: 10,
+  },
+  {
+    imdbID: "tt0088763",
+    Title: "Back to the Future",
+    Year: "1985",
+    Poster:
+      "https://m.media-amazon.com/images/M/MV5BZmU0M2Y1OGUtZjIxNi00ZjBkLTg1MjgtOWIyNThiZWIwYjRiXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
+    runtime: 116,
+    imdbRating: 8.5,
+    userRating: 9,
+  },
+];
 
 const KEY = "e44d4aee";
 
@@ -58,12 +55,11 @@ const average = (arr) =>
 
 export default function App() {
   const [query, setQuery] = useState("");
-
+  const [movies, setMovies] = useState([]);
+  const [watched, setWatched] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [selectedId, setSelectedId] = useState(null);
-
-  const { movies, isLoading, error } = useMovie(query);
-
-  const [watched, setWatched] = useLocalStorage([], "watched");
 
   /*
   useEffect(() => {
@@ -91,13 +87,58 @@ export default function App() {
 
   function handleAddWatch(movie) {
     setWatched((watched) => [...watched, movie]);
-
-    // localStorage.setItem("watched", JSON.stringify([...watched, movie]));
   }
 
   function handleDeleteWatched(id) {
     setWatched(watched.filter((movie) => movie.imdbID !== id));
   }
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function fetchMovies() {
+      try {
+        setIsLoading(true);
+        setError("");
+        const res = await fetch(
+          `http://www.omdbapi.com/?i=tt3896198&apikey=${KEY}&s=${query}`,
+          { signal: controller.signal }
+        );
+
+        if (!res.ok) {
+          throw new Error("Something went wrong");
+        }
+
+        const data = await res.json();
+
+        if (data.Response === "False") {
+          throw new Error("Movie not found!");
+        }
+        setMovies(data.Search);
+        setError("");
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error(err.message);
+          setError(err.message);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (query.length < 3) {
+      setMovies([]);
+      setError("");
+      return;
+    }
+
+    handleCloseMovie();
+    fetchMovies();
+
+    return function () {
+      controller.abort();
+    };
+  }, [query]);
 
   return (
     <>
@@ -164,20 +205,6 @@ function Logo() {
 }
 
 function Search({ query, setQuery }) {
-  const inputEl = useRef(null);
-
-  useKey("Enter", () => {
-    if (document.activeElement === inputEl.current) return;
-    inputEl.current.focus();
-    setQuery("");
-  });
-
-  // useEffect(() => {
-  //   const el = document.querySelector(".search");
-  //   console.log(el);
-  //   el.focus();
-  // }, []);
-
   return (
     <input
       className="search"
@@ -185,7 +212,6 @@ function Search({ query, setQuery }) {
       placeholder="Search movies..."
       value={query}
       onChange={(e) => setQuery(e.target.value)}
-      ref={inputEl}
     />
   );
 }
@@ -322,6 +348,21 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatch, watched }) {
     (movie) => movie.imdbID === selectedId
   )?.userRating;
 
+  function handleAdd() {
+    const newWatchedMovie = {
+      imdbID: selectedId,
+      title,
+      poster,
+      year,
+      runtime: Number(runtime.split(" ").at(0)),
+      imdbRating: Number(imdbRating),
+      userRating,
+    };
+
+    onAddWatch(newWatchedMovie);
+    onCloseMovie();
+  }
+
   const {
     Title: title,
     Year: year,
@@ -334,41 +375,6 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatch, watched }) {
     Director: director,
     Genre: genre,
   } = movie;
-
-  const [avgRating, setAvgRating] = useState(0);
-
-  function handleAdd() {
-    const newWatchedMovie = {
-      imdbID: selectedId,
-      title,
-      poster,
-      year,
-      runtime: Number(runtime.split(" ").at(0)),
-      imdbRating: Number(imdbRating),
-      userRating,
-      countRatingDecision: countRef.current,
-    };
-
-    onAddWatch(newWatchedMovie);
-    // onCloseMovie();
-
-    setAvgRating(Number(imdbRating));
-    // alert(avgRating);
-    setAvgRating((avgRating) => avgRating + userRating / 2);
-  }
-
-  const countRef = useRef(0);
-
-  useEffect(() => {
-    if (userRating) countRef.current++;
-  }, [userRating]);
-
-  // const [isTop, setIsTop] = useState(imdbRating > 8);
-  // console.log(isTop);
-
-  // useEffect(() => {
-  //   setIsTop(imdbRating > 8);
-  // }, [imdbRating]);
 
   useEffect(() => {
     async function getMovieDetails() {
@@ -394,22 +400,20 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatch, watched }) {
     };
   }, [title]);
 
-  // useEffect(() => {
-  //   function callback(e) {
-  //     if (e.code === "Escape") {
-  //       onCloseMovie();
-  //       console.log("CLOSING");
-  //     }
-  //   }
+  useEffect(() => {
+    function callback(e) {
+      if (e.code === "Escape") {
+        onCloseMovie();
+        console.log("CLOSING");
+      }
+    }
 
-  //   document.addEventListener("keydown", callback);
+    document.addEventListener("keydown", callback);
 
-  //   return function () {
-  //     document.removeEventListener("keydown", callback);
-  //   };
-  // }, [onCloseMovie]);
-
-  useKey("Escape", onCloseMovie);
+    return function () {
+      document.removeEventListener("keydown", callback);
+    };
+  }, [onCloseMovie]);
 
   return (
     <div className="details">
@@ -433,7 +437,6 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatch, watched }) {
               </p>
             </div>
           </header>
-          {/* <p>{avgRating}</p> */}
           <section>
             <div className="rating">
               {!isWatched ? (
